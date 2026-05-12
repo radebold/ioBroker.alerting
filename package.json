@@ -1,15 +1,15 @@
 {
   "name": "iobroker.alerting",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Generic rule based alerting adapter for ioBroker",
   "author": "Thomas Radebold <radebold@users.noreply.github.com>",
-  "homepage": "https://github.com/radebold/ioBroker.Alerting#readme",
+  "homepage": "https://github.com/radebold/ioBroker.alerting#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/radebold/ioBroker.Alerting.git"
+    "url": "git+https://github.com/radebold/ioBroker.alerting.git"
   },
   "bugs": {
-    "url": "https://github.com/radebold/ioBroker.Alerting/issues"
+    "url": "https://github.com/radebold/ioBroker.alerting/issues"
   },
   "license": "MIT",
   "keywords": [
