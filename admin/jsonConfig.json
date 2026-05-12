@@ -6,56 +6,121 @@
       "type": "panel",
       "label": "General",
       "items": {
-        "enabled": {
-          "type": "checkbox",
-          "label": "Enable adapter",
-          "default": true,
-          "sm": 12
-        },
-        "evaluateOnStart": {
-          "type": "checkbox",
-          "label": "Evaluate rules on adapter start",
-          "default": true,
-          "sm": 12
-        },
-        "sendOnStartup": {
-          "type": "checkbox",
-          "label": "Send notifications on adapter start if a rule already matches",
-          "default": false,
-          "sm": 12
-        },
-        "defaultMaxMessages": {
-          "type": "number",
-          "label": "Default maximum messages per active phase",
-          "min": 0,
-          "default": 1,
-          "sm": 6
-        },
-        "defaultMinIntervalSec": {
-          "type": "number",
-          "label": "Default minimum interval between messages",
-          "min": 0,
-          "default": 300,
-          "unit": "s",
-          "sm": 6
-        }
+        "enabled": { "type": "checkbox", "label": "Enable adapter", "default": true, "sm": 12 },
+        "evaluateOnStart": { "type": "checkbox", "label": "Evaluate rules on adapter start", "default": true, "sm": 12 },
+        "sendOnStartup": { "type": "checkbox", "label": "Send notifications on adapter start if a rule already matches", "default": false, "sm": 12 },
+        "defaultMaxMessages": { "type": "number", "label": "Default maximum messages per active phase", "min": 0, "default": 1, "sm": 6 },
+        "defaultMinIntervalSec": { "type": "number", "label": "Default minimum interval between messages", "min": 0, "default": 300, "unit": "s", "sm": 6 }
       }
     },
-    "rules": {
+    "rulesTab": {
       "type": "panel",
       "label": "Rules",
       "items": {
-        "rulesJson": {
-          "type": "text",
-          "label": "Rules as JSON array",
-          "minRows": 24,
-          "maxRows": 40,
-          "trim": false,
-          "validateJson": true,
-          "allowEmpty": true,
+        "_ruleHelp": { "type": "staticText", "text": "Create one row per rule. The Rule ID connects rules, criteria, channels and actions.", "sm": 12 },
+        "rules": {
+          "type": "table",
+          "label": "Rules",
           "sm": 12,
-          "help": "Define rules with nested AND/OR groups. See README for examples."
+          "items": {
+            "enabled": { "type": "checkbox", "title": "Active", "default": true, "width": "80" },
+            "id": { "type": "text", "title": "Rule ID", "width": "180" },
+            "name": { "type": "text", "title": "Name", "width": "220" },
+            "rootOperator": { "type": "select", "title": "Root logic", "default": "and", "width": "110", "options": [{ "label": "AND", "value": "and" }, { "label": "OR", "value": "or" }] },
+            "messageTitle": { "type": "text", "title": "Message title", "width": "260" },
+            "messageText": { "type": "text", "title": "Message text", "width": "420", "help": "Placeholders: ${rule.name}, ${changed.id}, ${changed.value}, ${state:adapter.0.state}" },
+            "maxMessages": { "type": "number", "title": "Max messages", "default": 1, "min": 0, "width": "120" },
+            "minIntervalSec": { "type": "number", "title": "Interval (s)", "default": 300, "min": 0, "width": "120" }
+          }
         }
+      }
+    },
+    "criteriaTab": {
+      "type": "panel",
+      "label": "Criteria",
+      "items": {
+        "_criteriaHelp": { "type": "staticText", "text": "Create one or more criteria rows per Rule ID. Rows with the same Group are evaluated together with the selected Group logic.", "sm": 12 },
+        "criteria": {
+          "type": "table",
+          "label": "Criteria",
+          "sm": 12,
+          "items": {
+            "enabled": { "type": "checkbox", "title": "Active", "default": true, "width": "80" },
+            "ruleId": { "type": "text", "title": "Rule ID", "width": "180" },
+            "groupId": { "type": "text", "title": "Group", "width": "130" },
+            "groupOperator": { "type": "select", "title": "Group logic", "default": "or", "width": "110", "options": [{ "label": "AND", "value": "and" }, { "label": "OR", "value": "or" }] },
+            "negate": { "type": "checkbox", "title": "NOT", "default": false, "width": "70" },
+            "state": { "type": "text", "title": "State", "width": "360" },
+            "operator": { "type": "select", "title": "Operator", "default": "eq", "width": "130", "options": [{ "label": "=", "value": "eq" }, { "label": "!=", "value": "ne" }, { "label": ">", "value": ">" }, { "label": ">=", "value": ">=" }, { "label": "<", "value": "<" }, { "label": "<=", "value": "<=" }, { "label": "contains", "value": "contains" }, { "label": "not contains", "value": "notContains" }, { "label": "regex", "value": "regex" }, { "label": "exists", "value": "exists" }, { "label": "not exists", "value": "notExists" }, { "label": "empty", "value": "isEmpty" }, { "label": "not empty", "value": "notEmpty" }, { "label": "true", "value": "isTrue" }, { "label": "false", "value": "isFalse" }] },
+            "compareMode": { "type": "select", "title": "Compare with", "default": "fixed", "width": "130", "options": [{ "label": "Fixed value", "value": "fixed" }, { "label": "Other state", "value": "state" }] },
+            "value": { "type": "text", "title": "Value", "width": "180" },
+            "valueState": { "type": "text", "title": "Value state", "width": "360" },
+            "valueType": { "type": "select", "title": "Value type", "default": "auto", "width": "110", "options": [{ "label": "auto", "value": "auto" }, { "label": "number", "value": "number" }, { "label": "boolean", "value": "boolean" }, { "label": "string", "value": "string" }, { "label": "json", "value": "json" }] }
+          }
+        }
+      }
+    },
+    "channelsTab": {
+      "type": "panel",
+      "label": "Channels",
+      "items": {
+        "_channelHelp": { "type": "staticText", "text": "Create one or more channels per Rule ID. sendTo builds a payload from named fields. state writes one value. stateJson builds a JSON message and writes it to a state.", "sm": 12 },
+        "channels": {
+          "type": "table",
+          "label": "Notification channels",
+          "sm": 12,
+          "items": {
+            "enabled": { "type": "checkbox", "title": "Active", "default": true, "width": "80" },
+            "ruleId": { "type": "text", "title": "Rule ID", "width": "180" },
+            "name": { "type": "text", "title": "Name", "width": "160" },
+            "type": { "type": "select", "title": "Type", "default": "sendTo", "width": "160", "options": [{ "label": "sendTo adapter", "value": "sendTo" }, { "label": "Write value to state", "value": "state" }, { "label": "Write JSON message to state", "value": "stateJson" }] },
+            "instance": { "type": "text", "title": "sendTo instance", "width": "160" },
+            "command": { "type": "text", "title": "sendTo command", "default": "send", "width": "130" },
+            "targetState": { "type": "text", "title": "Target state", "width": "320" },
+            "stateValueType": { "type": "select", "title": "State value type", "default": "string", "width": "130", "options": [{ "label": "string", "value": "string" }, { "label": "number", "value": "number" }, { "label": "boolean", "value": "boolean" }, { "label": "json/object", "value": "json" }] },
+            "ack": { "type": "checkbox", "title": "Ack", "default": false, "width": "70" },
+            "valueTemplate": { "type": "text", "title": "State value", "default": "${message.text}", "width": "360" },
+            "recipientField": { "type": "text", "title": "Recipient field", "width": "130" },
+            "recipient": { "type": "text", "title": "Recipient", "width": "220" },
+            "titleField": { "type": "text", "title": "Title field", "width": "120" },
+            "titleTemplate": { "type": "text", "title": "Title template", "default": "${message.title}", "width": "260" },
+            "textField": { "type": "text", "title": "Text field", "default": "text", "width": "120" },
+            "textTemplate": { "type": "text", "title": "Text template", "default": "${message.text}", "width": "360" },
+            "extra1Name": { "type": "text", "title": "Extra 1 field", "width": "130" },
+            "extra1Value": { "type": "text", "title": "Extra 1 value", "width": "220" },
+            "extra2Name": { "type": "text", "title": "Extra 2 field", "width": "130" },
+            "extra2Value": { "type": "text", "title": "Extra 2 value", "width": "220" }
+          }
+        }
+      }
+    },
+    "actionsTab": {
+      "type": "panel",
+      "label": "Actions",
+      "items": {
+        "_actionHelp": { "type": "staticText", "text": "Optional consequences. Set states when a rule becomes active, while it is active, or when it becomes inactive.", "sm": 12 },
+        "actions": {
+          "type": "table",
+          "label": "State actions",
+          "sm": 12,
+          "items": {
+            "enabled": { "type": "checkbox", "title": "Active", "default": true, "width": "80" },
+            "ruleId": { "type": "text", "title": "Rule ID", "width": "180" },
+            "when": { "type": "select", "title": "When", "default": "onTrue", "width": "130", "options": [{ "label": "on true", "value": "onTrue" }, { "label": "every true check", "value": "everyTrue" }, { "label": "on false/reset", "value": "onFalse" }] },
+            "targetState": { "type": "text", "title": "Target state", "width": "360" },
+            "value": { "type": "text", "title": "Value", "width": "220" },
+            "valueType": { "type": "select", "title": "Value type", "default": "auto", "width": "120", "options": [{ "label": "auto", "value": "auto" }, { "label": "number", "value": "number" }, { "label": "boolean", "value": "boolean" }, { "label": "string", "value": "string" }, { "label": "json", "value": "json" }] },
+            "ack": { "type": "checkbox", "title": "Ack", "default": false, "width": "70" }
+          }
+        }
+      }
+    },
+    "expert": {
+      "type": "panel",
+      "label": "Expert",
+      "items": {
+        "_expertHelp": { "type": "staticText", "text": "Legacy JSON import. Used only if no rows exist in the Rules table.", "sm": 12 },
+        "rulesJson": { "type": "text", "label": "Legacy rules JSON", "minRows": 8, "maxRows": 24, "trim": false, "validateJson": true, "allowEmpty": true, "sm": 12 }
       }
     }
   }
