@@ -1,0 +1,45 @@
+{
+  "name": "iobroker.alerting",
+  "version": "0.1.0",
+  "description": "Generic rule based alerting adapter for ioBroker",
+  "author": "Thomas Radebold <radebold@users.noreply.github.com>",
+  "homepage": "https://github.com/radebold/ioBroker.Alerting#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/radebold/ioBroker.Alerting.git"
+  },
+  "bugs": {
+    "url": "https://github.com/radebold/ioBroker.Alerting/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ioBroker",
+    "alerting",
+    "alarm",
+    "notification",
+    "telegram",
+    "pushover",
+    "whatsapp",
+    "open-wa"
+  ],
+  "main": "main.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test:js": "node --check main.js && node --check lib/ruleTools.js",
+    "test": "npm run test:js"
+  },
+  "dependencies": {
+    "@iobroker/adapter-core": "^3.3.2"
+  },
+  "devDependencies": {},
+  "files": [
+    "admin/",
+    "lib/",
+    "main.js",
+    "io-package.json",
+    "README.md",
+    "LICENSE"
+  ]
+}

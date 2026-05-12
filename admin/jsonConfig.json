@@ -1,0 +1,62 @@
+{
+  "type": "tabs",
+  "i18n": true,
+  "items": {
+    "general": {
+      "type": "panel",
+      "label": "General",
+      "items": {
+        "enabled": {
+          "type": "checkbox",
+          "label": "Enable adapter",
+          "default": true,
+          "sm": 12
+        },
+        "evaluateOnStart": {
+          "type": "checkbox",
+          "label": "Evaluate rules on adapter start",
+          "default": true,
+          "sm": 12
+        },
+        "sendOnStartup": {
+          "type": "checkbox",
+          "label": "Send notifications on adapter start if a rule already matches",
+          "default": false,
+          "sm": 12
+        },
+        "defaultMaxMessages": {
+          "type": "number",
+          "label": "Default maximum messages per active phase",
+          "min": 0,
+          "default": 1,
+          "sm": 6
+        },
+        "defaultMinIntervalSec": {
+          "type": "number",
+          "label": "Default minimum interval between messages",
+          "min": 0,
+          "default": 300,
+          "unit": "s",
+          "sm": 6
+        }
+      }
+    },
+    "rules": {
+      "type": "panel",
+      "label": "Rules",
+      "items": {
+        "rulesJson": {
+          "type": "text",
+          "label": "Rules as JSON array",
+          "minRows": 24,
+          "maxRows": 40,
+          "trim": false,
+          "validateJson": true,
+          "allowEmpty": true,
+          "sm": 12,
+          "help": "Define rules with nested AND/OR groups. See README for examples."
+        }
+      }
+    }
+  }
+}

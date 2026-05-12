@@ -1,0 +1,104 @@
+{
+  "common": {
+    "name": "alerting",
+    "version": "0.1.0",
+    "news": {
+      "0.1.0": {
+        "en": "Initial version with rule engine, notifications, rate limiting and state actions.",
+        "de": "Initiale Version mit Regelengine, Benachrichtigungen, Rate-Limit und State-Aktionen."
+      }
+    },
+    "title": "Alerting",
+    "titleLang": {
+      "en": "Alerting",
+      "de": "Alarmierungen"
+    },
+    "desc": {
+      "en": "Rule based alerting with AND/OR criteria, notifications through installed adapters and optional state actions.",
+      "de": "Regelbasierte Alarmierung mit UND/ODER-Kriterien, Benachrichtigungen über installierte Adapter und optionalen State-Aktionen."
+    },
+    "authors": [
+      "Thomas Radebold <radebold@users.noreply.github.com>"
+    ],
+    "keywords": [
+      "alerting",
+      "alarm",
+      "notification",
+      "rules"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "main": "main.js",
+    "icon": "alerting.svg",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/radebold/ioBroker.Alerting/main/admin/alerting.svg",
+    "readme": "https://github.com/radebold/ioBroker.Alerting/blob/main/README.md",
+    "loglevel": "info",
+    "mode": "daemon",
+    "type": "notification",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "push",
+    "materialize": true,
+    "adminUI": {
+      "config": "json"
+    },
+    "messagebox": true,
+    "dependencies": [
+      {
+        "js-controller": ">=5.0.0"
+      }
+    ],
+    "tier": 3
+  },
+  "native": {
+    "enabled": true,
+    "evaluateOnStart": true,
+    "sendOnStartup": false,
+    "defaultMaxMessages": 1,
+    "defaultMinIntervalSec": 300,
+    "rulesJson": "[]"
+  },
+  "objects": [
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "If connected to ioBroker",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.lastEvaluation",
+      "type": "state",
+      "common": {
+        "role": "date",
+        "name": "Last rule evaluation",
+        "type": "number",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.lastError",
+      "type": "state",
+      "common": {
+        "role": "text",
+        "name": "Last error",
+        "type": "string",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    }
+  ],
+  "instanceObjects": []
+}

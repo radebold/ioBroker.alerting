@@ -1,0 +1,11 @@
+{
+  "General": "General",
+  "Rules": "Rules",
+  "Enable adapter": "Enable adapter",
+  "Evaluate rules on adapter start": "Evaluate rules on adapter start",
+  "Send notifications on adapter start if a rule already matches": "Send notifications on adapter start if a rule already matches",
+  "Default maximum messages per active phase": "Default maximum messages per active phase",
+  "Default minimum interval between messages": "Default minimum interval between messages",
+  "Rules as JSON array": "Rules as JSON array",
+  "Define rules with nested AND/OR groups. See README for examples.": "Define rules with nested AND/OR groups. See README for examples."
+}
