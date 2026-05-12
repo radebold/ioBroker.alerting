@@ -10,6 +10,37 @@ const {
     renderTemplate,
 } = require('./lib/ruleTools');
 
+function boolValue(value, defaultValue = false) {
+    if (value === undefined || value === null || value === '') return defaultValue;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (['true', '1', 'yes', 'ja', 'on', 'ein'].includes(normalized)) return true;
+        if (['false', '0', 'no', 'nein', 'off', 'aus'].includes(normalized)) return false;
+    }
+    return Boolean(value);
+}
+
+function normalizeLogicalOperator(value, fallback = 'and') {
+    const op = String(value || fallback).toLowerCase();
+    return op === 'or' ? 'or' : 'and';
+}
+
+function normalizeCompareMode(value) {
+    return String(value || 'fixed').toLowerCase() === 'state' ? 'state' : 'fixed';
+}
+
+function compactPayload(payload) {
+    const result = {};
+    for (const [key, value] of Object.entries(payload)) {
+        if (!key) continue;
+        if (value === undefined || value === null) continue;
+        result[key] = value;
+    }
+    return result;
+}
+
 class Alerting extends utils.Adapter {
     constructor(options = {}) {
         super({ ...options, name: 'alerting' });
@@ -61,9 +92,10 @@ class Alerting extends utils.Adapter {
     }
 
     async loadRules() {
-        const rawRules = parseJsonMaybe(this.config.rulesJson, []);
+        const rawRules = this.buildRulesFromConfig();
+
         if (!Array.isArray(rawRules)) {
-            throw new Error('rulesJson must be a JSON array');
+            throw new Error('Rules configuration must be an array');
         }
 
         this.rules = rawRules
@@ -107,6 +139,164 @@ class Alerting extends utils.Adapter {
                 this.stateToRuleIds.set(stateId, set);
             }
         }
+    }
+
+    buildRulesFromConfig() {
+        const structuredRules = Array.isArray(this.config.rules) ? this.config.rules : [];
+        const hasStructuredRules = structuredRules.some(rule => rule && (rule.id || rule.name));
+
+        if (!hasStructuredRules) {
+            return parseJsonMaybe(this.config.rulesJson, []);
+        }
+
+        const criteriaRows = Array.isArray(this.config.criteria) ? this.config.criteria : [];
+        const channelRows = Array.isArray(this.config.channels) ? this.config.channels : [];
+        const actionRows = Array.isArray(this.config.actions) ? this.config.actions : [];
+
+        return structuredRules
+            .filter(rule => rule && (rule.id || rule.name))
+            .map((rule, index) => {
+                const id = normalizeRuleId(rule.id || rule.name || `rule_${index + 1}`);
+                const criteria = criteriaRows.filter(row => row && row.enabled !== false && normalizeRuleId(row.ruleId) === id);
+                const channels = channelRows.filter(row => row && row.enabled !== false && normalizeRuleId(row.ruleId) === id);
+                const actions = actionRows.filter(row => row && row.enabled !== false && normalizeRuleId(row.ruleId) === id);
+
+                return {
+                    id,
+                    name: rule.name || id,
+                    enabled: rule.enabled !== false,
+                    condition: this.buildConditionFromCriteria(rule, criteria),
+                    message: {
+                        title: rule.messageTitle || rule.name || id,
+                        text: rule.messageText || `Regel "${rule.name || id}" ist aktiv.`,
+                    },
+                    limits: {
+                        maxMessages: Number(rule.maxMessages ?? this.config.defaultMaxMessages ?? 1),
+                        minIntervalSec: Number(rule.minIntervalSec ?? this.config.defaultMinIntervalSec ?? 300),
+                    },
+                    channels: channels.map(channel => this.buildChannel(channel)),
+                    actions: actions.map(action => this.buildAction(action)),
+                };
+            });
+    }
+
+    buildConditionFromCriteria(rule, criteriaRows) {
+        const rootOperator = normalizeLogicalOperator(rule.rootOperator, 'and');
+        const rootItems = [];
+        const groups = new Map();
+
+        for (const row of criteriaRows) {
+            if (!row.state) continue;
+
+            const valueType = row.valueType || 'auto';
+            const leaf = {
+                state: row.state,
+                operator: row.operator || 'eq',
+                valueType,
+            };
+
+            if (normalizeCompareMode(row.compareMode) === 'state') {
+                if (row.valueState) leaf.valueState = row.valueState;
+            } else {
+                leaf.value = row.value;
+            }
+
+            const condition = boolValue(row.negate, false) ? { op: 'not', items: [leaf] } : leaf;
+            const groupId = normalizeRuleId(row.groupId || '');
+
+            if (!groupId) {
+                rootItems.push(condition);
+                continue;
+            }
+
+            if (!groups.has(groupId)) {
+                groups.set(groupId, {
+                    op: normalizeLogicalOperator(row.groupOperator, 'or'),
+                    items: [],
+                });
+            }
+
+            groups.get(groupId).items.push(condition);
+        }
+
+        for (const group of groups.values()) {
+            if (group.items.length === 1) {
+                rootItems.push(group.items[0]);
+            } else if (group.items.length > 1) {
+                rootItems.push(group);
+            }
+        }
+
+        if (!rootItems.length) {
+            throw new Error(`Rule "${rule.id || rule.name || 'unknown'}" has no enabled criteria`);
+        }
+
+        if (rootItems.length === 1) return rootItems[0];
+        return { op: rootOperator, items: rootItems };
+    }
+
+    buildChannel(channel) {
+        const type = channel.type || 'sendTo';
+
+        if (type === 'state') {
+            return {
+                type,
+                enabled: channel.enabled !== false,
+                state: channel.targetState || channel.state,
+                valueType: channel.stateValueType || channel.valueType || 'string',
+                ack: boolValue(channel.ack, false),
+                value: channel.valueTemplate || channel.value || '${message.text}',
+            };
+        }
+
+        if (type === 'stateJson') {
+            return {
+                type,
+                enabled: channel.enabled !== false,
+                state: channel.targetState || channel.state,
+                valueType: channel.stateValueType || channel.valueType || 'string',
+                ack: boolValue(channel.ack, false),
+                recipientField: channel.recipientField || 'to',
+                recipient: channel.recipient || '',
+                titleField: channel.titleField || '',
+                titleTemplate: channel.titleTemplate || '${message.title}',
+                textField: channel.textField || 'text',
+                textTemplate: channel.textTemplate || '${message.text}',
+                extra1Name: channel.extra1Name || '',
+                extra1Value: channel.extra1Value || '',
+                extra2Name: channel.extra2Name || '',
+                extra2Value: channel.extra2Value || '',
+            };
+        }
+
+        return {
+            type: 'sendTo',
+            enabled: channel.enabled !== false,
+            instance: channel.instance,
+            command: channel.command || 'send',
+            recipientField: channel.recipientField || '',
+            recipient: channel.recipient || '',
+            titleField: channel.titleField || '',
+            titleTemplate: channel.titleTemplate || '${message.title}',
+            textField: channel.textField || 'text',
+            textTemplate: channel.textTemplate || '${message.text}',
+            extra1Name: channel.extra1Name || '',
+            extra1Value: channel.extra1Value || '',
+            extra2Name: channel.extra2Name || '',
+            extra2Value: channel.extra2Value || '',
+        };
+    }
+
+    buildAction(action) {
+        return {
+            type: 'setState',
+            enabled: action.enabled !== false,
+            when: action.when || 'onTrue',
+            state: action.targetState || action.state,
+            value: action.value,
+            valueType: action.valueType || 'auto',
+            ack: boolValue(action.ack, false),
+        };
     }
 
     async createRuleObjects() {
@@ -308,6 +498,32 @@ class Alerting extends utils.Adapter {
         return { title, text, context };
     }
 
+    buildPayloadFromFields(channel, context) {
+        const payload = {};
+
+        if (channel.recipientField && channel.recipient) {
+            payload[channel.recipientField] = renderTemplate(channel.recipient, context);
+        }
+
+        if (channel.titleField) {
+            payload[channel.titleField] = renderTemplate(channel.titleTemplate || '${message.title}', context);
+        }
+
+        if (channel.textField) {
+            payload[channel.textField] = renderTemplate(channel.textTemplate || '${message.text}', context);
+        }
+
+        if (channel.extra1Name) {
+            payload[channel.extra1Name] = renderTemplate(channel.extra1Value || '', context);
+        }
+
+        if (channel.extra2Name) {
+            payload[channel.extra2Name] = renderTemplate(channel.extra2Value || '', context);
+        }
+
+        return compactPayload(payload);
+    }
+
     async sendNotifications(rule, options, now) {
         const { title, text, context } = this.buildMessage(rule, options, now);
         context.messageTitle = title;
@@ -317,14 +533,19 @@ class Alerting extends utils.Adapter {
         for (const channel of rule.channels) {
             try {
                 if (channel.type === 'sendTo') {
-                    const payloadTemplate = channel.payload ?? { text };
-                    const payload = renderTemplate(payloadTemplate, context);
-                    await this.sendToTarget(channel.instance, channel.command || 'send', payload);
+                    const payload = this.buildPayloadFromFields(channel, context);
+                    const finalPayload = Object.keys(payload).length ? payload : { text };
+                    await this.sendToTarget(channel.instance, channel.command || 'send', finalPayload);
                     sent += 1;
                 } else if (channel.type === 'state') {
                     const valueTemplate = channel.value ?? text;
                     const rendered = renderTemplate(valueTemplate, context);
                     const converted = convertValue(rendered, channel.valueType || 'string');
+                    await this.setForeignStateAsync(channel.state, converted, channel.ack === true);
+                    sent += 1;
+                } else if (channel.type === 'stateJson') {
+                    const payload = this.buildPayloadFromFields(channel, context);
+                    const converted = channel.valueType === 'json' ? payload : JSON.stringify(payload);
                     await this.setForeignStateAsync(channel.state, converted, channel.ack === true);
                     sent += 1;
                 } else {
